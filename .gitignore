@@ -1,0 +1,7 @@
+# Assignment materials — not part of the submitted codebase
+assignment_req/
+Reference_images/
+
+# OS files
+.DS_Store
+Thumbs.db
