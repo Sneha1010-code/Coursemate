@@ -7,6 +7,9 @@ other students in the same tutorial.
 Built for BUS4012 Assignment 3 — React frontend, Python (FastAPI) backend,
 Supabase (Postgres + Auth) database.
 
+**Live app:** https://coursemate-five.vercel.app
+**Live API:** https://coursemate-1-i4m1.onrender.com
+
 ## Architecture
 
 ```
@@ -68,11 +71,17 @@ Visit http://localhost:5173.
 - **Backend → Render**: new Web Service from this repo, root directory
   `backend`, build command `pip install -r requirements.txt`, start command
   `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Add `SUPABASE_URL`,
-  `SUPABASE_SERVICE_ROLE_KEY`, and `FRONTEND_URL` (the deployed Vercel URL,
-  for CORS) as environment variables.
+  `SUPABASE_SERVICE_ROLE_KEY`, `FRONTEND_URL` (the deployed Vercel URL, for
+  CORS), and `PYTHON_VERSION=3.12.8` (Render's newer default Python has no
+  prebuilt wheel yet for one of the dependencies) as environment variables.
 
 All secrets (Supabase service role key, DB connection details) are only ever
 set as environment variables on Render/locally — never committed, never sent
 to the frontend.
+
+**Note for the demo video:** Render's free tier spins the backend down after
+inactivity; the first request after idling can take 30–50s to wake it up.
+Load the live app once a minute or two before you start recording so it's
+already warm.
 
 See `PROMPTS.md` for the prompt log used to build this project.

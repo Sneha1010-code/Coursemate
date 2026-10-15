@@ -90,5 +90,49 @@ deleted so the project is clean for the real demo recording.
 
 ---
 
-<!-- Further entries (deployment) are appended below as the build
-     progresses. -->
+### 5. "yea the repo is public, push it with necessary humanized commits"
+
+**Intent:** Get the code onto GitHub as a readable commit history (one
+meaningful commit per milestone) rather than a single giant commit, and
+confirm the repo should stay public for the assignment's GitHub walkthrough.
+
+**What it produced:** The single initial commit was split into 9 commits
+grouped by concern (scaffolding, backend core, backend endpoints, schema,
+the signup fix, frontend design system, auth screens, matching screens,
+docs), then pushed. Pushing itself needed a detour: the machine's existing
+SSH key belonged to a different GitHub account than the repo owner, so the
+`gh` CLI was installed and the user authenticated as themselves
+(`gh auth login`) before the push could go through with write access.
+
+### 6. Deployment — Render backend
+
+**Intent:** Get the backend live on a cloud platform per the assignment's
+deployment requirement.
+
+**What it produced:** A Render Web Service connected to the repo
+(`backend/render.yaml`), which initially failed to build: Render's default
+Python (3.14) has no prebuilt wheel yet for `pydantic-core`, and compiling
+it from source failed because the Rust bindings library (PyO3) doesn't
+support 3.14 yet. Fixed by pinning `PYTHON_VERSION=3.12.8` via
+`backend/.python-version` and a Render env var — the same version tested
+locally throughout development.
+
+### 7. Deployment — Vercel frontend, then "NetworkError" / "CORS Missing Allow Origin"
+
+**Intent:** Get the frontend live on Vercel and connected to the deployed
+backend.
+
+**What it produced:** A Vercel project (root directory `frontend`) with the
+three `VITE_*` env vars. Signing up on the deployed app then failed with a
+browser network error, traced to the backend's CORS allow-list
+(`FRONTEND_URL`) still pointing at `localhost` — fixed by updating it to the
+Vercel production URL. A second CORS error after that turned out to be the
+user testing from a Vercel *preview* deployment URL (a random per-commit
+subdomain) rather than the stable production URL the backend was configured
+to allow; pointing them at the production URL
+(`https://coursemate-five.vercel.app`) resolved it. Verified end-to-end on
+the live URLs by checking the submitted profile actually landed in the
+Supabase `profiles` table.
+
+Live app: https://coursemate-five.vercel.app
+Live API: https://coursemate-1-i4m1.onrender.com
