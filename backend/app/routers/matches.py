@@ -17,12 +17,15 @@ async def browse_matches(user=Depends(get_current_user)):
     if not (me.get("university") and me.get("course") and me.get("tutorial_group")):
         raise HTTPException(status_code=400, detail="Complete your course details first")
 
+    # Case-insensitive, whitespace-trimmed match: two students who both typed
+    # "Tutorial 3, Wednesday" shouldn't fail to match just because one typed
+    # "tutorial 3, wednesday".
     others_result = (
         supabase.table("profiles")
         .select("*")
-        .eq("university", me["university"])
-        .eq("course", me["course"])
-        .eq("tutorial_group", me["tutorial_group"])
+        .ilike("university", me["university"].strip())
+        .ilike("course", me["course"].strip())
+        .ilike("tutorial_group", me["tutorial_group"].strip())
         .neq("id", user.id)
         .execute()
     )
