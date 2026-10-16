@@ -1,13 +1,23 @@
-# Prompt Log
+# Prompt Log — CourseMate
 
-Prompts used with Claude Code to build CourseMate, in the order they were
-given. Follow-up prompts are grouped under the main prompt they relate to.
+**Course:** BUS4012 – Vibe Coding for Startups, Assignment 3
+**Tool used:** Claude Code (Anthropic)
+**GitHub repository:** https://github.com/Sneha1010-code/Coursemate
+**Live app:** https://coursemate-five.vercel.app
+**Live API:** https://coursemate-1-i4m1.onrender.com
 
-GitHub repository: https://github.com/Sneha1010-code/Coursemate
+This log records the prompts used to develop CourseMate, in the order they
+were given, each with the intent behind it and what it produced. Development
+followed an iterative, conversational workflow: an initial detailed brief set
+the scope and constraints, and each subsequent prompt either supplied new
+information (credentials, confirmation that a step was complete) or directed
+the next stage of work. Short confirmation prompts are included alongside the
+main ones for completeness and are annotated with the decision they were
+authorizing.
 
 ---
 
-### 1. Main build prompt
+### 1. Project brief and build authorization
 
 > "You are my autonomous software development assistant... [full
 > requirements: read the assignment PDF and reference images, treat the PDF
@@ -16,123 +26,131 @@ GitHub repository: https://github.com/Sneha1010-code/Coursemate
 > implementation, ask only when genuinely blocked on credentials/config,
 > never commit secrets, use a proper .gitignore, confirm before first push]"
 
-**Intent:** Kick off the whole assignment — read the spec and reference
-screenshots, scope the app, and build a complete, deployable, working
-application rather than a prototype.
+**Intent:** Establish the full scope of the assignment in a single brief —
+read the spec and reference screenshots, define the technology constraints,
+and set the expectation that the agent should deliver a complete, deployable
+application rather than a partial prototype, flagging only genuine blockers.
 
-**What it produced:** Reading of `assignment_req/vibecodingassignment.pdf`
-and `Reference_images/`, identification of the required stack (React +
-FastAPI + Supabase) and the five-screen signup → course details → profile
-setup → browse matches → pending requests flow, then the initial
-architecture decision (Supabase Auth for login direct from the frontend
-with the public anon key; all data access routed through a FastAPI backend
-using the private service-role key, so secrets never reach the browser).
+**Outcome:** The assignment PDF (`assignment_req/vibecodingassignment.pdf`)
+and reference mockups (`Reference_images/`) were read and used to identify
+the required stack (React + FastAPI + Supabase) and the five-screen
+signup → course details → profile setup → browse matches → pending requests
+flow. This produced the initial architecture decision: Supabase Auth handles
+login directly from the frontend using the public anon key, while all data
+access is routed through a FastAPI backend using the private service-role
+key, so no sensitive credential is ever exposed to the browser.
 
-### 2. "ok start"
+### 2. Plan confirmation and implementation go-ahead
 
-**Intent:** Confirm the proposed plan (React/FastAPI/Supabase, Vercel +
-Render deployment) and give the go-ahead to begin implementation without
-further upfront questions.
+> "ok start"
 
-**What it produced:** Node.js installed locally via nvm (wasn't present on
-the machine), the Vite React app and FastAPI backend scaffolded, the
-Supabase schema (`profiles`, `connections` tables with RLS enabled and no
-client-facing policies) written, and all six screens (Sign Up, Log In,
-Course Details, Profile Setup, Browse Matches, Pending Requests) built to
-match the reference mockups' layout, typography and colour scheme.
+**Intent:** After reviewing the proposed architecture (React + FastAPI +
+Supabase, Vercel + Render deployment) presented back by the agent, authorize
+implementation to begin without further upfront discussion.
 
-### 3. Supabase project credentials provided
+**Outcome:** Node.js was installed locally via nvm, the Vite React app and
+FastAPI backend were scaffolded, the Supabase schema (`profiles`,
+`connections` tables with row-level security enabled and no client-facing
+policies) was written, and all six screens (Sign Up, Log In, Course Details,
+Profile Setup, Browse Matches, Pending Requests) were built to match the
+reference mockups' layout, typography, and colour scheme.
+
+### 3. Supabase credentials provided
 
 > "SUPABASE PROJECT URL: ... SUPABASE PUBLISHABLE KEY: ... SUPABASE
 > SERVICE_ROLE KEY: ..."
 
-**Intent:** Supply the real Supabase project so the app could be wired up
-and tested against a live database instead of placeholders.
+**Intent:** Supply the real Supabase project credentials so the application
+could be connected to and tested against a live database rather than
+placeholder values.
 
-**What it produced:** Local `.env` files for both frontend and backend
-populated with the real credentials (never committed — both are in
-`.gitignore`), and a request to run `backend/schema.sql` in the Supabase
-SQL Editor to create the `profiles` and `connections` tables.
+**Outcome:** Local `.env` files for both frontend and backend were populated
+with the credentials (never committed — both files are listed in
+`.gitignore`), followed by a request to run `backend/schema.sql` in the
+Supabase SQL Editor to create the `profiles` and `connections` tables.
 
-### 4. "done" / "done, run it now" (schema applied)
+### 4. Confirmation to proceed with end-to-end testing
 
-**Intent:** Confirm the schema had been run, so automated end-to-end
-testing against the live database could proceed.
+> "done" / "done, run it now"
 
-**What it produced:** A full two-user Playwright-driven test through the
-real UI (sign up → course details → profile setup → browse matches →
-connect → accept), which surfaced two real bugs that were fixed in the
+**Intent:** Confirm the database schema had been applied so that automated
+end-to-end testing against the live database could proceed.
+
+**Outcome:** A full two-user, Playwright-driven test was run through the real
+UI (sign up → course details → profile setup → browse matches → connect →
+accept), which surfaced two real issues that were diagnosed and fixed in the
 same pass:
 
 1. Supabase's default "Confirm email" setting blocked sign-ups behind an
    email-confirmation step.
-2. After turning that off, sign-ups still failed with
+2. After disabling that, sign-ups still failed with
    `over_email_send_rate_limit` — the default shared Supabase SMTP service
    has a very low hourly email quota, and the public `signUp()` endpoint is
-   rate-limited against it regardless of the confirm-email setting. This
-   would have blocked sign-ups live during the demo recording too, not just
-   during testing.
+   rate-limited against it regardless of the confirm-email setting. Left
+   unfixed, this would have blocked sign-ups live during the demo recording
+   as well, not just during testing.
 
-   **Fix:** added a `POST /auth/signup` backend endpoint
-   (`backend/app/routers/auth.py`) that creates the user via Supabase's
-   admin API using the service-role key (`email_confirm: true`, no email
-   sent, not subject to that rate limit), inserts the profile row, and lets
-   the frontend immediately sign the user in with
-   `signInWithPassword()`. This is also a more robust design for the actual
-   demo video, since it removes a flaky third-party dependency from the
-   signup path.
+   **Fix:** Added a `POST /auth/signup` backend endpoint
+   (`backend/app/routers/auth.py`) that creates the user via Supabase's admin
+   API using the service-role key (`email_confirm: true`, no email sent, not
+   subject to the rate limit), inserts the profile row, and lets the
+   frontend immediately sign the user in with `signInWithPassword()`. This
+   also removes a flaky third-party dependency from the signup path, making
+   it more reliable for the demo recording.
 
-After the fix, the full flow was re-verified end-to-end with two accounts,
-and the resulting rows (`profiles`, `connections` with `status: accepted`)
-were confirmed directly via the Supabase API to make sure they were
-genuinely persisted, not just reflected in the UI. Test accounts were then
-deleted so the project is clean for the real demo recording.
+The full flow was then re-verified end-to-end with two accounts, and the
+resulting `profiles` and `connections` (`status: accepted`) rows were
+confirmed directly via the Supabase API to ensure the data was genuinely
+persisted, not just reflected in the UI. Test accounts were deleted
+afterward to leave the project clean for the demo recording.
 
 ---
 
-### 5. "yea the repo is public, push it with necessary humanized commits"
+### 5. GitHub publication — structured history, public repository
 
-**Intent:** Get the code onto GitHub as a readable commit history (one
-meaningful commit per milestone) rather than a single giant commit, and
-confirm the repo should stay public for the assignment's GitHub walkthrough.
+> "yea the repo is public, push it with necessary humanized commits"
 
-**What it produced:** The single initial commit was split into 9 commits
+**Intent:** Publish the project to GitHub as a readable, milestone-based
+commit history (one meaningful commit per development stage) instead of a
+single bulk commit, and confirm the repository should be public for the
+assignment's GitHub walkthrough requirement.
+
+**Outcome:** The initial single commit was restructured into 9 commits
 grouped by concern (scaffolding, backend core, backend endpoints, schema,
 the signup fix, frontend design system, auth screens, matching screens,
-docs), then pushed. Pushing itself needed a detour: the machine's existing
-SSH key belonged to a different GitHub account than the repo owner, so the
-`gh` CLI was installed and the user authenticated as themselves
-(`gh auth login`) before the push could go through with write access.
+documentation), then pushed. This required first resolving a GitHub
+authentication mismatch — the machine's existing SSH key belonged to a
+different account than the repository owner — by installing the `gh` CLI and
+authenticating as the project owner (`gh auth login`) before the push could
+proceed with write access.
 
-### 6. Deployment — Render backend
+### 6. Backend deployment to Render
 
-**Intent:** Get the backend live on a cloud platform per the assignment's
-deployment requirement.
+**Intent:** Deploy the Python backend to a cloud platform to satisfy the
+assignment's deployment requirement.
 
-**What it produced:** A Render Web Service connected to the repo
-(`backend/render.yaml`), which initially failed to build: Render's default
-Python (3.14) has no prebuilt wheel yet for `pydantic-core`, and compiling
-it from source failed because the Rust bindings library (PyO3) doesn't
-support 3.14 yet. Fixed by pinning `PYTHON_VERSION=3.12.8` via
-`backend/.python-version` and a Render env var — the same version tested
-locally throughout development.
+**Outcome:** A Render Web Service was connected to the repository
+(`backend/render.yaml`). The initial build failed because Render's default
+Python version (3.14) has no prebuilt wheel for `pydantic-core`, and
+compiling it from source failed since the underlying Rust bindings (PyO3)
+don't yet support 3.14. This was resolved by pinning
+`PYTHON_VERSION=3.12.8` via `backend/.python-version` and a matching Render
+environment variable — the same version used throughout local development
+and testing.
 
-### 7. Deployment — Vercel frontend, then "NetworkError" / "CORS Missing Allow Origin"
+### 7. Frontend deployment to Vercel and CORS resolution
 
-**Intent:** Get the frontend live on Vercel and connected to the deployed
+**Intent:** Deploy the React frontend to Vercel and connect it to the live
 backend.
 
-**What it produced:** A Vercel project (root directory `frontend`) with the
-three `VITE_*` env vars. Signing up on the deployed app then failed with a
-browser network error, traced to the backend's CORS allow-list
-(`FRONTEND_URL`) still pointing at `localhost` — fixed by updating it to the
-Vercel production URL. A second CORS error after that turned out to be the
-user testing from a Vercel *preview* deployment URL (a random per-commit
-subdomain) rather than the stable production URL the backend was configured
-to allow; pointing them at the production URL
-(`https://coursemate-five.vercel.app`) resolved it. Verified end-to-end on
-the live URLs by checking the submitted profile actually landed in the
-Supabase `profiles` table.
-
-Live app: https://coursemate-five.vercel.app
-Live API: https://coursemate-1-i4m1.onrender.com
+**Outcome:** A Vercel project (root directory `frontend`) was configured with
+the three required `VITE_*` environment variables. Signing up on the
+deployed app initially failed with a network error, traced to the backend's
+CORS allow-list (`FRONTEND_URL`) still pointing at `localhost` — resolved by
+updating it to the Vercel production URL. A second CORS error was then
+traced to testing from a Vercel *preview* deployment URL (a random
+per-commit subdomain) rather than the stable production URL the backend was
+configured to allow; pointing testing at the production URL
+(`https://coursemate-five.vercel.app`) resolved it. The fix was verified
+end-to-end by confirming a submitted profile landed correctly in the
+Supabase `profiles` table on the live, deployed stack.
